@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<psalm
+    errorLevel="4"
+    resolveFromConfigFile="true"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="https://getpsalm.org/schema/config"
+    xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
+    findUnusedBaselineEntry="false"
+    findUnusedCode="false"
+    phpVersion="8.2"
+>
+    <projectFiles>
+        <directory name="src" />
+        <ignoreFiles>
+            <directory name="vendor" />
+        </ignoreFiles>
+    </projectFiles>
+
+    <issueHandlers>
+        <MissingOverrideAttribute>
+            <errorLevel type="suppress">
+                <directory name="src" />
+            </errorLevel>
+        </MissingOverrideAttribute>
+        <UndefinedClass>
+            <errorLevel type="suppress">
+                <referencedClass name="Illuminate\*" />
+            </errorLevel>
+        </UndefinedClass>
+        <UndefinedFunction>
+            <errorLevel type="suppress">
+                <referencedFunction name="Illuminate\*" />
+            </errorLevel>
+        </UndefinedFunction>
+        <MixedAssignment>
+            <errorLevel type="suppress">
+                <directory name="src" />
+            </errorLevel>
+        </MixedAssignment>
+        <MixedArgument>
+            <errorLevel type="suppress">
+                <directory name="src" />
+            </errorLevel>
+        </MixedArgument>
+        <MixedReturnStatement>
+            <errorLevel type="suppress">
+                <directory name="src" />
+            </errorLevel>
+        </MixedReturnStatement>
+        <MixedInferredReturnType>
+            <errorLevel type="suppress">
+                <directory name="src" />
+            </errorLevel>
+        </MixedInferredReturnType>
+    </issueHandlers>
+</psalm>
