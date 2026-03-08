@@ -19,6 +19,11 @@ use PapiAI\Core\Agent;
 use PapiAI\Core\Response;
 
 /**
+ * Static facade for the PapiAI Agent singleton.
+ *
+ * Provides a convenient static API to interact with the configured AI agent,
+ * including running prompts, streaming responses, and attaching tools or middleware.
+ *
  * @method static Response run(string $prompt, array $options = [])
  * @method static iterable stream(string $prompt, array $options = [])
  * @method static iterable streamEvents(string $prompt, array $options = [])
@@ -29,6 +34,11 @@ use PapiAI\Core\Response;
  */
 class Papi extends Facade
 {
+    /**
+     * Get the registered name of the component in the service container.
+     *
+     * @return string
+     */
     protected static function getFacadeAccessor(): string
     {
         return 'papi.agent';

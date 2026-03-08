@@ -22,8 +22,22 @@ use PapiAI\Core\Contracts\ProviderInterface;
 use PapiAI\Core\Storage\FileConversationStore;
 use PapiAI\Laravel\Storage\EloquentConversationStore;
 
+/**
+ * Laravel service provider for PapiAI.
+ *
+ * Registers AI provider, agent, and conversation store bindings into the
+ * Laravel container based on the published `papi.php` configuration file.
+ */
 class PapiServiceProvider extends ServiceProvider
 {
+    /**
+     * Bootstrap PapiAI package services.
+     *
+     * Publishes the papi configuration file so users can customise
+     * provider settings, middleware, and conversation storage.
+     *
+     * @return void
+     */
     public function boot(): void
     {
         $this->publishes([
@@ -31,6 +45,15 @@ class PapiServiceProvider extends ServiceProvider
         ], 'papi-config');
     }
 
+    /**
+     * Register PapiAI bindings into the container.
+     *
+     * Binds the default AI provider as a singleton (`papi`), a pre-configured
+     * Agent singleton (`papi.agent`) with middleware, and the conversation
+     * store implementation based on config (file or Eloquent).
+     *
+     * @return void
+     */
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__ . '/../config/papi.php', 'papi');
