@@ -12,10 +12,12 @@
 
 declare(strict_types=1);
 
-/*
-|--------------------------------------------------------------------------
-| Test Case
-|--------------------------------------------------------------------------
-*/
+use PapiAI\Laravel\Facades\Papi;
 
-uses(PapiAI\Laravel\Tests\TestCase::class)->in('Unit');
+describe('Papi Facade', function (): void {
+    it('resolves to the papi.agent binding', function (): void {
+        $agent = Papi::getFacadeRoot();
+
+        expect($agent)->toBeInstanceOf(\PapiAI\Core\Agent::class);
+    });
+});

@@ -131,7 +131,7 @@ $status = $queue->status($jobId);
 
 - PHP 8.2+
 - Laravel 10, 11, or 12
-- papi-ai/papi-core ^0.8
+- papi-ai/papi-core ^0.9
 
 ## License
 

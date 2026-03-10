@@ -22,35 +22,5 @@
                 <directory name="src" />
             </errorLevel>
         </MissingOverrideAttribute>
-        <UndefinedClass>
-            <errorLevel type="suppress">
-                <referencedClass name="Illuminate\*" />
-            </errorLevel>
-        </UndefinedClass>
-        <UndefinedFunction>
-            <errorLevel type="suppress">
-                <referencedFunction name="Illuminate\*" />
-            </errorLevel>
-        </UndefinedFunction>
-        <MixedAssignment>
-            <errorLevel type="suppress">
-                <directory name="src" />
-            </errorLevel>
-        </MixedAssignment>
-        <MixedArgument>
-            <errorLevel type="suppress">
-                <directory name="src" />
-            </errorLevel>
-        </MixedArgument>
-        <MixedReturnStatement>
-            <errorLevel type="suppress">
-                <directory name="src" />
-            </errorLevel>
-        </MixedReturnStatement>
-        <MixedInferredReturnType>
-            <errorLevel type="suppress">
-                <directory name="src" />
-            </errorLevel>
-        </MixedInferredReturnType>
     </issueHandlers>
 </psalm>
