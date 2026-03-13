@@ -1,5 +1,7 @@
 # PapiAI Laravel Bridge
 
+[![CI](https://github.com/papi-ai/laravel/workflows/CI/badge.svg)](https://github.com/papi-ai/laravel/actions?query=workflow%3ACI) [![Latest Version](https://img.shields.io/packagist/v/papi-ai/laravel.svg)](https://packagist.org/packages/papi-ai/laravel) [![Total Downloads](https://img.shields.io/packagist/dt/papi-ai/laravel.svg)](https://packagist.org/packages/papi-ai/laravel) [![PHP Version](https://img.shields.io/packagist/php-v/papi-ai/laravel.svg)](https://packagist.org/packages/papi-ai/laravel) [![License](https://img.shields.io/packagist/l/papi-ai/laravel.svg)](https://packagist.org/packages/papi-ai/laravel)
+
 Laravel integration for the [PapiAI](https://github.com/papi-ai/papi-core) AI agent library. Provides a service provider, facade, Eloquent conversation store, and queue integration.
 
 ## Installation
