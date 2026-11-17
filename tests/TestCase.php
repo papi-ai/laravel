@@ -16,6 +16,10 @@ namespace PapiAI\Laravel\Tests;
 
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
 use PapiAI\Core\Contracts\ProviderInterface;
+use PapiAI\Core\Factory\AbstractProviderFactory;
+use PapiAI\Core\Factory\Setting;
+use PapiAI\Core\Factory\SettingValues;
+use PapiAI\Core\Message;
 use PapiAI\Core\Response;
 use PapiAI\Laravel\PapiServiceProvider;
 
@@ -29,10 +33,12 @@ abstract class TestCase extends OrchestraTestCase
     protected function defineEnvironment($app): void
     {
         $app['config']->set('papi.default', 'test');
-        $app['config']->set('papi.providers.test', [
-            'driver' => TestProvider::class,
-            'api_key' => 'test-key',
-            'model' => 'test-model',
+        $app['config']->set('papi.providers', [
+            'test' => [
+                'driver' => TestProviderFactory::class,
+                'api_key' => 'test-key',
+                'model' => 'test-model',
+            ],
         ]);
         $app['config']->set('papi.middleware', []);
         $app['config']->set('papi.conversation.store', 'file');
@@ -48,18 +54,29 @@ abstract class TestCase extends OrchestraTestCase
 }
 
 /**
- * A minimal test provider for unit testing the service provider.
+ * Remembers the settings it was built with and the last request it was sent.
  */
 class TestProvider implements ProviderInterface
 {
+    /** @var list<Message> */
+    public array $lastMessages = [];
+
+    /** @var array<string, mixed> */
+    public array $lastOptions = [];
+
+    /**
+     * @param array<string, mixed> $settings
+     */
     public function __construct(
-        private readonly string $apiKey = '',
-        private readonly string $defaultModel = '',
+        public readonly array $settings = [],
     ) {
     }
 
     public function chat(array $messages, array $options = []): Response
     {
+        $this->lastMessages = $messages;
+        $this->lastOptions = $options;
+
         return new Response(text: 'test');
     }
 
@@ -86,5 +103,34 @@ class TestProvider implements ProviderInterface
     public function getName(): string
     {
         return 'test';
+    }
+}
+
+final class TestProviderFactory extends AbstractProviderFactory
+{
+    public function name(): string
+    {
+        return 'test';
+    }
+
+    public function package(): string
+    {
+        return 'papi-ai/test';
+    }
+
+    public function settings(): array
+    {
+        return [
+            new Setting('api_key', true, 'Test key'),
+            new Setting('model', false, 'Default model'),
+        ];
+    }
+
+    protected function build(SettingValues $values): ProviderInterface
+    {
+        return new TestProvider($this->argumentsGiven([
+            'api_key' => $values->stringOrNull('api_key'),
+            'model' => $values->stringOrNull('model'),
+        ]));
     }
 }

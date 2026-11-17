@@ -14,30 +14,28 @@ declare(strict_types=1);
 
 namespace PapiAI\Laravel;
 
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use PapiAI\Core\Agent;
+use PapiAI\Core\Contracts\AgentInterface;
 use PapiAI\Core\Contracts\ConversationStoreInterface;
 use PapiAI\Core\Contracts\MiddlewareInterface;
 use PapiAI\Core\Contracts\ProviderInterface;
+use PapiAI\Core\Contracts\QueueInterface;
+use PapiAI\Core\Factory\ComposerDiscovery;
+use PapiAI\Core\Factory\ProviderRegistry;
 use PapiAI\Core\Storage\FileConversationStore;
+use PapiAI\Laravel\Queue\LaravelQueue;
 use PapiAI\Laravel\Storage\EloquentConversationStore;
 
 /**
  * Laravel service provider for PapiAI.
  *
- * Registers AI provider, agent, and conversation store bindings into the
- * Laravel container based on the published `papi.php` configuration file.
+ * Binds the default provider (`papi`, ProviderInterface), an agent on it (`papi.agent`,
+ * AgentInterface, Agent), the queue and the conversation store, all from `config/papi.php`.
  */
 class PapiServiceProvider extends ServiceProvider
 {
-    /**
-     * Bootstrap PapiAI package services.
-     *
-     * Publishes the papi configuration file so users can customise
-     * provider settings, middleware, and conversation storage.
-     *
-     * @return void
-     */
     public function boot(): void
     {
         $this->publishes([
@@ -45,67 +43,68 @@ class PapiServiceProvider extends ServiceProvider
         ], 'papi-config');
     }
 
-    /**
-     * Register PapiAI bindings into the container.
-     *
-     * Binds the default AI provider as a singleton (`papi`), a pre-configured
-     * Agent singleton (`papi.agent`) with middleware, and the conversation
-     * store implementation based on config (file or Eloquent).
-     *
-     * @return void
-     */
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__ . '/../config/papi.php', 'papi');
 
-        $this->app->singleton('papi', function ($app): ProviderInterface {
-            /** @var array{default: string, providers: array<string, array{driver: class-string, api_key: string|null, model: string}>} $config */
-            $config = $app['config']['papi'];
-            $providerName = $config['default'];
-            $providerConfig = $config['providers'][$providerName];
+        $this->bindProviders();
+        $this->bindAgent();
+        $this->bindQueueAndConversationStore();
+    }
 
-            /** @var class-string<ProviderInterface> $driverClass */
-            $driverClass = $providerConfig['driver'];
+    private function bindProviders(): void
+    {
+        $this->app->singleton(ProviderRegistry::class, static fn (): ProviderRegistry => new ProviderRegistry(new ComposerDiscovery()));
 
-            return new $driverClass(
-                apiKey: $providerConfig['api_key'] ?? '',
-                defaultModel: $providerConfig['model'] ?? '',
-            );
+        $this->app->bind(ConfiguredProviders::class, static function (Application $app): ConfiguredProviders {
+            /** @var array<string, array<string, mixed>> $entries */
+            $entries = $app->make('config')->get('papi.providers', []);
+
+            return new ConfiguredProviders($entries, $app->make(ProviderRegistry::class));
         });
 
-        $this->app->singleton('papi.agent', function ($app): Agent {
-            /** @var ProviderInterface $provider */
-            $provider = $app->make('papi');
+        $this->app->singleton('papi', static function (Application $app): ProviderInterface {
+            /** @var string $default */
+            $default = $app->make('config')->get('papi.default');
 
-            /** @var array{default: string, providers: array<string, array{model: string}>, middleware: array<class-string<MiddlewareInterface>>} $config */
-            $config = $app['config']['papi'];
-            $providerName = $config['default'];
-            $model = $config['providers'][$providerName]['model'] ?? '';
-
-            $middleware = [];
-            foreach ($config['middleware'] as $middlewareClass) {
-                $middleware[] = $app->make($middlewareClass);
-            }
-
-            return new Agent(
-                provider: $provider,
-                model: $model,
-                middleware: $middleware,
-            );
+            return $app->make(ConfiguredProviders::class)->create($default);
         });
+        $this->app->alias('papi', ProviderInterface::class);
+    }
 
-        $this->app->bind(ConversationStoreInterface::class, function ($app): ConversationStoreInterface {
-            /** @var array{conversation: array{store: string, path?: string}} $config */
-            $config = $app['config']['papi'];
-            $storeType = $config['conversation']['store'];
+    private function bindAgent(): void
+    {
+        $this->app->singleton('papi.agent', static function (Application $app): Agent {
+            /** @var array{instructions?: string|null, max_tokens?: int|null} $agent */
+            $agent = $app->make('config')->get('papi.agent', []);
+            /** @var list<class-string<MiddlewareInterface>> $middlewareClasses */
+            $middlewareClasses = $app->make('config')->get('papi.middleware', []);
 
-            if ($storeType === 'eloquent') {
+            return new Agent(...array_filter([
+                'provider' => $app->make('papi'),
+                'model' => '',
+                'instructions' => $agent['instructions'] ?? null,
+                'maxTokens' => $agent['max_tokens'] ?? null,
+                'middleware' => array_map(static fn (string $class): MiddlewareInterface => $app->make($class), $middlewareClasses),
+            ], static fn (mixed $argument): bool => $argument !== null));
+        });
+        $this->app->alias('papi.agent', AgentInterface::class);
+        $this->app->alias('papi.agent', Agent::class);
+    }
+
+    private function bindQueueAndConversationStore(): void
+    {
+        $this->app->bind(QueueInterface::class, LaravelQueue::class);
+
+        $this->app->bind(ConversationStoreInterface::class, static function (Application $app): ConversationStoreInterface {
+            /** @var array{store: string, path?: string} $conversation */
+            $conversation = $app->make('config')->get('papi.conversation');
+
+            if ($conversation['store'] === 'eloquent') {
                 return new EloquentConversationStore();
             }
 
-            return new FileConversationStore(
-                $config['conversation']['path'] ?? storage_path('papi/conversations'),
-            );
+            return new FileConversationStore($conversation['path'] ?? storage_path('papi/conversations'));
         });
     }
 }

@@ -12,9 +12,13 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Schema;
+use PapiAI\Core\Agent;
 use PapiAI\Core\AgentJob;
+use PapiAI\Core\Contracts\QueueInterface;
 use PapiAI\Core\JobStatus;
 use PapiAI\Laravel\Queue\LaravelQueue;
 
@@ -81,6 +85,23 @@ describe('LaravelQueue', function (): void {
         expect($status->status)->toBe(JobStatus::PENDING);
     });
 
+    it('returns the answer of a completed job', function (): void {
+        $record = (object) [
+            'status' => JobStatus::COMPLETED,
+            'result' => json_encode('Lisbon'),
+            'error' => null,
+        ];
+
+        DB::shouldReceive('table')->with('papi_jobs')->once()->andReturnSelf();
+        DB::shouldReceive('where')->with('id', 'job-123')->once()->andReturnSelf();
+        DB::shouldReceive('first')->once()->andReturn($record);
+
+        $status = (new LaravelQueue())->status('job-123');
+
+        expect($status->isCompleted())->toBeTrue();
+        expect($status->result?->text)->toBe('Lisbon');
+    });
+
     it('returns pending status for unknown job ID', function (): void {
         $queue = new LaravelQueue();
 
@@ -128,5 +149,37 @@ describe('LaravelQueue', function (): void {
             });
 
         $queue->dispatch($job);
+    });
+
+    describe('on a sync queue', function (): void {
+        beforeEach(function (): void {
+            $this->app['config']->set('queue.default', 'sync');
+            Schema::create('papi_jobs', function (Blueprint $table): void {
+                $table->uuid('id')->primary();
+                $table->string('status');
+                $table->text('payload');
+                $table->text('result')->nullable();
+                $table->text('error')->nullable();
+                $table->timestamps();
+            });
+        });
+
+        it('runs the job on the agent it names and records the answer', function (): void {
+            $queue = $this->app->make(QueueInterface::class);
+
+            $status = $queue->status($queue->dispatch(new AgentJob(Agent::class, 'Capital of Portugal?')));
+
+            expect($status->isCompleted())->toBeTrue();
+            expect($status->result?->text)->toBe('test');
+        });
+
+        it('records why a job failed', function (): void {
+            $queue = $this->app->make(QueueInterface::class);
+
+            $status = $queue->status($queue->dispatch(new AgentJob('App\\Agents\\Missing', 'Hi')));
+
+            expect($status->isFailed())->toBeTrue();
+            expect($status->error)->toContain('App\\Agents\\Missing');
+        });
     });
 });

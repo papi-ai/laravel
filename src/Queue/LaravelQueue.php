@@ -20,6 +20,7 @@ use Illuminate\Support\Str;
 use PapiAI\Core\AgentJob;
 use PapiAI\Core\Contracts\QueueInterface;
 use PapiAI\Core\JobStatus;
+use PapiAI\Core\Response;
 
 /**
  * Laravel queue adapter for dispatching asynchronous agent jobs.
@@ -106,7 +107,7 @@ class LaravelQueue implements QueueInterface
      *
      * @param string $jobId UUID of the job to check
      *
-     * @return JobStatus Current status including any error message on failure
+     * @return JobStatus Current status, with the answer's text once completed and the error once failed
      */
     public function status(string $jobId): JobStatus
     {
@@ -122,6 +123,7 @@ class LaravelQueue implements QueueInterface
         return new JobStatus(
             jobId: $jobId,
             status: $record->status,
+            result: isset($record->result) ? new Response(text: json_decode($record->result, true, flags: JSON_THROW_ON_ERROR)) : null,
             error: $record->error ?? null,
         );
     }
